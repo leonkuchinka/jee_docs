@@ -15,8 +15,8 @@ List<Laptop> laptops;
 ###### oder
 
 ```java
-                                                    @ManyToOne
-													Student student;
+							    @ManyToOne
+							    Sudent student;
 ```
 
 ##### 1:n unidirektional mit assoz. Tabelle 
@@ -29,8 +29,8 @@ List<Laptop> laptops;
 ##### 1:n bidirektional ohne assoz. Tabelle
 
 ```java
-                                                    @ManyToOne
-                                                    Student student;
+							    @ManyToOne
+							    Student student;
 @OneToMany(mappedBy = "student")
 List<Laptop> laptops;
 ```
@@ -38,8 +38,8 @@ List<Laptop> laptops;
 ##### 1:n bidirektional mit assoz. Tabelle
 
 ```java
-                                                    @ManyToOne
-                                                    Student student;
+							    @ManyToOne
+							    Student student;
 @OneToMany
 List<Laptop> laptops;
 ```
@@ -47,8 +47,8 @@ List<Laptop> laptops;
 ##### n:m bidirektional
 
 ```java
-                                                    @ManyToMany
-                                                    List<Student> students;
+							    @ManyToMany
+							    List<Student> students;
 @ManyToMany(mappedBy = "students")
 List<Laptop> laptops;
 ```
@@ -73,14 +73,14 @@ List<Laptop> laptops;
 - bei OneToMany: 
 
   ```java
-                                      public void setStudent(Student student) {
-                                          if(this.student != null &&                                                     				this.student.getLaptops().contains(this))
-                                              this.student.removeLaptop(this);
-                                          if(act != null && 
-                                             !student.getLaptops().contains(this))
-                                              student.addLaptop(this);
-                                          this.student = student;
-                                      }
+					      public void setStudent(Student student) {
+						  if(this.student != null && this.student.getLaptops().contains(this))
+						      this.student.removeLaptop(this);
+						  if(act != null && 
+						     !student.getLaptops().contains(this))
+						      student.addLaptop(this);
+						  this.student = student;
+					      }
   
   public void addLaptop(Laptop laptop) {
       if(!this.laptops.contains(laptop))
@@ -146,8 +146,8 @@ List<Laptop> laptops;
               <property name="hibernate.hbm2ddl.auto" value="create-drop"></property>
               <property name="hibernate.show_sql" value="true"></property>
               <property name="hibernate.format_sql" value="true"></property>
-              <property name="hibernate.trancsaction.flush_before_completion" 									value="true"></property>
-              <property name="hibernate.dialect" 																	value="org.hibernate.dialect.DerbyDialect"></property>
+              <property name="hibernate.trancsaction.flush_before_completion" value="true"></property>
+              <property name="hibernate.dialect" value="org.hibernate.dialect.DerbyDialect"></property>
           </properties>
       </persistence-unit>
   </persistence>
