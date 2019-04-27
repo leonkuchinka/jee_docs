@@ -2,7 +2,7 @@
 
 
 
-![pic](/home/leon/Desktop/class%20diagram.png)
+![pic](class%20diagram.png)
 
 ##### 1:n unidirektional ohne assoz. Tabelle 
 
