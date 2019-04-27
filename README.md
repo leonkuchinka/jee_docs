@@ -228,15 +228,15 @@ GET
 
 POST
 	- 201 Created wenn erfolgreich
-    - 422 Unprocessable Entity wenn nicht erfolgreich
+   	- 422 Unprocessable Entity wenn nicht erfolgreich
 
 PUT
 	- 200 OK oder 204 No Content wenn erfolgreich
-    - 404 Not Found wenn Resource nicht gefunden
+   	- 404 Not Found wenn Resource nicht gefunden
     
 DELTE
 	- 200 OK oder 204 No Content wenn erfolgreich
-    - 404 Not Found wenn Resource nicht gefunden
+    	- 404 Not Found wenn Resource nicht gefunden
 
 ```
 
