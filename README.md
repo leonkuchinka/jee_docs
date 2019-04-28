@@ -143,11 +143,15 @@ List<Laptop> laptops;
       <persistence-unit name="dbPU" transaction-type="JTA">
           <jta-data-source>java:jboss/datasources/dbDS</jta-data-source>
           <properties>
-              <property name="hibernate.hbm2ddl.auto" value="create-drop"></property>
-              <property name="hibernate.show_sql" value="true"></property>
-              <property name="hibernate.format_sql" value="true"></property>
-              <property name="hibernate.trancsaction.flush_before_completion" value="true"></property>
-              <property name="hibernate.dialect" value="org.hibernate.dialect.DerbyDialect"></property>
+		<!--<property name="hibernate.hbm2ddl.auto" value="create-drop"></property>
+		<property name="hibernate.show_sql" value="true"></property>
+		<property name="hibernate.format_sql" value="true"></property>
+		<property name="hibernate.trancsaction.flush_before_completion" value="true"></property>
+		<property name="hibernate.dialect" value="org.hibernate.dialect.DerbyDialect"></property>-->
+		<property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
+		<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
+		<property name="javax.persistence.schema-generation.scripts.create-target" value="sampleCreate.ddl"/>
+		<property name="javax.persistence.schema-generation.scripts.drop-target" value="sampleDrop.ddl"/>
           </properties>
       </persistence-unit>
   </persistence>
