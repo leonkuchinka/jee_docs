@@ -238,7 +238,7 @@ PUT
 	- 200 OK oder 204 No Content wenn erfolgreich
    	- 404 Not Found wenn Resource nicht gefunden
     
-DELTE
+DELETE
 	- 200 OK oder 204 No Content wenn erfolgreich
     	- 404 Not Found wenn Resource nicht gefunden
 
