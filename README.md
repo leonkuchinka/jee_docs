@@ -350,3 +350,28 @@ public class MyAppST {
 
 ```
 
+###### persistence.xml for Junit
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence" version="2.1">
+    <persistence-unit name="myPU" transaction-type="RESOURCE_LOCAL">
+        <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+        <class>at.htl.project.model.Student</class>
+	<class>at.htl.project.converter.MyConverter</class>
+        <exclude-unlisted-classes>true</exclude-unlisted-classes>
+        <properties>
+            <property name="eclipselink.logging.level" value="FINE"/>
+            <property name="eclipselink.target-database" value="DERBY"/>
+            <property name="javax.persistence.jdbc.driver"
+                      value="org.apache.derby.jdbc.ClientDriver"/>
+            <property name="javax.persistence.jdbc.url"
+                      value="jdbc:derby://localhost:1527/db"/>
+            <property name="javax.persistence.jdbc.user" value="app"/>
+            <property name="javax.persistence.jdbc.password" value="app"/>
+            <property name="javax.persistence.schema-generation.database.action"
+                      value="none"/>
+        </properties>
+    </persistence-unit>
+</persistence>
+```
+
