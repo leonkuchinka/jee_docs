@@ -157,8 +157,10 @@ List<Laptop> laptops;
   </persistence>
   
   ```
-
-  
+###### JPQL join fetch
+```java
+@NamedQuery(name="Student.findAll", query = "select distinct s from Student s left join fetch s.laptops")
+```
 
 ## REST
 
