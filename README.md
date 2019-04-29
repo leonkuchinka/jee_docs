@@ -320,7 +320,7 @@ public class MyAppST {
     
     @Test
     public void test03_CreateSomething(){
-        JsonObject obj = ....
+        JsonObject obj = JsonObject json = Json.createReader(new StringReader("{...}")).readObject();
             Response response = this.target.path("/something")
             .request()
             .post(Entity.json(obj));
