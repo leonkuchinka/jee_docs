@@ -301,11 +301,13 @@ import static org.hamcrest.Matchers.is;
 public class MyAppST {
     private static Client client;
     private static WebTarget target;
+    private static EntityManager em;
 
     @BeforeClass
     public static void init(){
         client = ClientBuilder.newClient();
         target = client.target("http://localhost:8080/myapp/api");
+	em = Persistence.createEntityManagerFactory("myPU").createEntityManager();
     }
     
     @Test
@@ -344,6 +346,14 @@ public class MyAppST {
             .request()
             .delete();
         assertThat(response.getStatus(), is(200));
+    }
+    
+    @Test
+    public void test040database(){
+        em.getTransaction().begin();
+        Student student = em.find(Student.class, 1l);
+        assertThat(movie, notNullValue());
+        em.getTransaction().commit();
     }
 }
 
