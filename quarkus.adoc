@@ -1,0 +1,592 @@
+= Quarkus Cheatsheet
+:source-highlighter: coderay
+
+== CLD
+[plantuml]
+----
+Program "n" *--> "1" Show
+Program "n" *--> "1" Act
+Act "1" --> "n" ActMember
+ActMember "1" --> "n" Act
+Animal --|> ActMember
+Actor --|> ActMember
+
+class Show {
+    date: LocalDate
+}
+class Program {
+    show: Show
+}
+class Act {
+    description: String
+}
+class ActMember {
+    name: string,
+    act: Act
+}
+class Animal {
+    age: int
+}
+class Actor {
+    svNr: String
+}
+----
+
+== UCD
+[plantuml]
+----
+left to right direction
+skinparam packageStyle rectangle
+
+actor user as "User"
+actor admin as "Admin"
+
+rectangle MySystem {
+usecase UC1 as "My First UseCase"
+usecase UC2 as "My Second UseCase"
+usecase UC3 as "My Third UseCase"
+}
+
+user --> UC1
+user --> UC2
+admin --> UC3
+
+user <|- admin
+----
+
+== Konfiguration
+pom.xml::
+[source, xml]
+----
+<dependencies>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-orm-panache</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-postgresql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-jsonb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jsonb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-db</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-openapi</artifactId>
+    </dependency>
+</dependencies>
+----
+
+application.properties::
+....
+%dev.quarkus.datasource.url=jdbc:postgresql://localhost:5432/postgres
+%prod.quarkus.datasource.url=jdbc:postgresql://postgres:5432/postgres
+quarkus.datasource.driver = org.postgresql.Driver
+quarkus.datasource.username=postgres
+quarkus.datasource.password=passme
+
+quarkus.swagger-ui.always-include=true
+
+# drop and create the database at startup (use `update` to only update the schema)
+quarkus.hibernate-orm.database.generation = drop-and-create
+....
+
+== Code
+
+InitBean::
+[source, java]
+----
+@ApplicationScoped
+public class InitBean {
+
+    @Inject
+    EntityManager em;
+
+    @Transactional
+    public void init(@Observes StartupEvent event){
+        System.out.println("----init----");
+    }
+}
+----
+
+File einlesen::
+Datei in `resources`-Ordner geben
+[source, java]
+----
+ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+InputStream is = classloader.getResourceAsStream("myfile.csv");
+
+InputStreamReader streamReader = new InputStreamReader(is, StandardCharsets.UTF_8);
+BufferedReader reader = new BufferedReader(streamReader);
+for (String line; (line = reader.readLine()) != null;) {
+    System.out.println(line);
+}
+----
+
+=== Panache
+PanacheRepository::
+[source, java]
+----
+@ApplicationScoped
+public class EntityDao implements PanacheRepository<Entity> {
+    ...
+}
+----
+
+Simple Queries::
+[source, java]
+----
+List<Entity> entities = entityDao.find("x = :x", Parameters.with("x", x)).list();
+----
+
+Komplexe Queries::
+Normales JPQL-Query über EntityManager. Tuple auf eigenes Objekt mappen.
+[source, java]
+----
+Panache.getEntityManager().createQuery("select s.date as date, count(a) as cnt from Show s\n" +
+                "join Program p on s.id = p.show.id\n" +
+                "join Act a on a.id = p.act.id\n" +
+                "group by s.id, s.date", Tuple.class).getResultStream()
+                .map(t ->
+                    new ShowStatisticsDto(t.get("date", LocalDate.class), 
+                            t.get("cnt", Long.class).intValue())
+                ).collect(Collectors.toList()
+----
+member of
+[source, java]
+----
+teeTimePanacheRepo
+    .find("select t from TeeTime t join fetch t.players where :golfer member of t.players",
+        Parameters.with("golfer", golfer))
+    .list()
+----
+=== Pagination
+[source, java]
+----
+@GET
+@Path("/clues")
+public Response getEntity(@QueryParam("limit") @DefaultValue("10") int limit, @QueryParam("offset") @DefaultValue("0") int offset) {
+    return Response.ok(facade.getEntities(limit, offset)).build();
+}
+----
+
+[source, java]
+----
+public List<Entity> getEntities(int limit, int offset){
+    return em.createQuery("select e from Entity e")
+            .setMaxResults(limit)
+            .setFirstResult(offset)
+            .getResultList();
+}
+----
+
+=== DTO
+Klasse für JSON-Serialisierung erweitern:
+[source, java]
+----
+public class Show {
+    Long id;
+    LocalDate date;
+}
+----
+[source, java]
+----
+public class Show {
+    Long id;
+    LocalDate date;
+    List<Act> acts;
+}
+----
+DTO konsumieren
+[source, java]
+----
+@POST
+public Response saveShow(ShowDto show){}
+----
+DTO umwandeln und speichern
+[source, java]
+----
+Show show = ShowDto.fromDto(showDto);
+this.persistAndFlush(show);
+----
+Erweiterungsfelder extra behandeln
+[source, java]
+----
+showDto.getActs().stream().forEach(a -> {
+            a = actDao.findById(a.getId());
+            programDao.persist(new Program(a, show));
+        });
+----
+
+=== Jackson
+LocalDate::
+[source, java]
+----
+@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd.MM.yyyy")
+LocalDate date;
+----
+
+Feld ignorieren::
+----
+@JsonIgnore
+----
+
+Feld bei null-Wert ignorieren::
+[source, java]
+----
+@JsonInclude(JsonInclude.Include.NON_NULL)
+----
+
+=== Jsonb
+
+Jedes Feld braucht Setter & Getter!!::
+
+[source, java]
+----
+@JsonbDateFormat(value = JsonbDateFormat.DEFAULT_FORMAT)
+private LocalDateTime time;
+----
+
+Feld ignorieren::
+[source, java]
+----
+@JsonbTransient
+----
+
+== REST-API konsumieren
+
+Interface::
+[source, java]
+----
+@Path("/mypath")
+@RegisterRestClient
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+@ClientHeaderParam(name = "X-Application-Name", value = "APP-NAME")
+public interface MyRestService {
+
+    @GET
+    @Path("/{param1}")
+    @ClientHeaderParam(name = "Authorization", value = "{generateAuthHeader}")
+    JsonArray get(@PathParam("param1") String param1, @QueryParam("param2") String param2);
+
+    default String generateAuthHeader() {
+        return "Basic " + new String(Base64.getEncoder().encode("duke:SECRET".getBytes()));
+    }
+}
+----
+
+application.properties::
+....
+at.htl.MyRestService/mp-rest/url=http://myapi.com
+at.htl.MyRestService/mp-rest/scope=javax.inject.Singleton
+....
+
+Verwendung::
+[source, java]
+----
+@Inject
+@RestClient
+MyRestService myRestService;
+----
+
+[source, java]
+----
+JsonArray tmp = myRestService.get();
+tmp.getValuesAs(t -> {
+    JsonObject obj = t.asJsonObject();
+    return new Entity(...);
+}).stream().forEach(em::persist);
+----
+
+== Health & Metrics
+
+Retry & Fallback::
+[source, xml]
+----
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+</dependency>
+----
+
+[source, java]
+----
+@GET
+@Retry(maxRetries = 1)
+@Fallback(fallbackMethod = "fallbackMethod")
+public Response someMethod(){
+...
+}
+
+public Response fallbackMethod() {
+    return Response.serverError().build();
+}
+----
+
+Metrics::
+[source, xml]
+----
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-smallrye-metrics</artifactId>
+</dependency>
+----
+[source, java]
+----
+@Timeout(2000)
+@Counted(name = "someMethod_called" )
+@Timed(name= "timer", description = "How long it takes to perform this task", unit = MetricUnits.MILLISECONDS)
+public Response someMethod(){
+...
+}
+----
+
+Health::
+[source, xml]
+----
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-smallrye-health</artifactId>
+</dependency>
+----
+[source, java]
+----
+import javax.enterprise.inject.Produces;
+
+@ApplicationScoped
+public class ApplicationHealthChecks {
+
+    @Inject
+    EntityManager em;
+
+    @Liveness
+    @Produces
+    public HealthCheck liveCheck(){
+        return HealthStatus.up("App");
+    }
+
+    @Readiness
+    @Produces
+    public HealthCheck dbHealthCheck() {
+        try{
+            Object obj = em.createNativeQuery("select 1").getResultList();
+            return HealthStatus.state("Database", obj != null);
+        } catch (Exception e) {
+            return HealthStatus.down("Database");
+        }
+    }
+}
+----
+
+== Testen
+
+=== AssertJ-DB
+[source, java]
+----
+@QuarkusTest
+@QuarkusTestResource(H2DatabaseTestResource.class)
+public class DatabaseTest {
+
+    @Inject
+    DataSource dataSource;
+
+    @Test
+    public void test01MyTable() {
+        Table mytable = new Table(this.dataSource, "mytable");
+
+        assertThat(mytable).column("column1").isNumber(true);
+        assertThat(mytable).column("column2").isText(true);
+
+        assertThat(mytable).hasNumberOfRows(2);
+
+        assertThat(mytable).column("column2")
+                .hasValues("Value1", "Value2");
+
+        assertThat(mytable).row(0)
+                .value("column1").isEqualTo(1)
+                .value("column2").isEqualTo("Value1");
+
+        assertThat(teetime).column("column1")
+                .hasOnlyNotNullValues();
+    }
+----
+
+=== Endpoint
+
+Auth::
+https://github.com/rest-assured/rest-assured/wiki/Usage#basic-authentication
+
+Output::
+[source, json]
+----
+[
+  {
+    "id": 11510,
+    "title": "pair of dice, lost",
+    "clues_count": 5
+  },
+  {
+    "id": 11531,
+    "title": "mixed bag",
+    "clues_count": 5
+  },
+  {
+    "id": 11532,
+    "title": "let's \"ch\"at",
+    "clues_count": 5
+  }
+]
+----
+[source, java]
+----
+@Test
+public void test(){
+    given()
+    .when()
+        .get("/test")
+    .then()
+        .statusCode(200)
+        .body("id", hasItems(11510, 11531),
+                "title", hasItems(containsString("let")));
+
+    given()
+        .queryParam("limit", 10)
+        .queryParam("offset", 0)
+    .when()
+        .get("/test")
+    .then()
+        .statusCode(200)
+        .body("size()", is(10));
+
+}
+----
+
+
+=== Datenbanktests mit In-Memory-DB
+pom.xml::
+[source, xml]
+----
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-jdbc-h2</artifactId>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-test-h2</artifactId>
+  <scope>test</scope>
+</dependency>
+----
+
+application.properties::
+....
+%test.quarkus.datasource.url=jdbc:h2:mem:test;DB_CLOSE_DELAY=-1
+%test.quarkus.datasource.driver=org.h2.Driver
+....
+
+Annotation für Testklasse::
+[source, java]
+----
+@QuarkusTestResource(H2DatabaseTestResource.class)
+----
+
+== Starten
+=== Dev
+....
+docker run -p 5432:5432 -e POSTGRES_PASSWORD=passme -d postgres
+
+./mvnw compile quarkus:dev
+....
+
+=== Prod
+docker-compose::
+[source, yaml]
+----
+version: '3.1'
+
+services:
+  postgres:
+    image: postgres
+    volumes:
+      - data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: passme
+    ports:
+      - 5432:5432
+    networks:
+      - my-net
+
+  quarkus:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    networks:
+      - my-net
+    ports:
+      - 8080:8080
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  my-net:
+    driver: bridge
+----
+
+....
+mvn package
+
+docker-compose up
+....
+
+== SwaggerUI
+[source, xml]
+----
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-smallrye-openapi</artifactId>
+</dependency>
+----
+....
+quarkus.swagger-ui.always-include=true
+....
+
+== Nützliche Links
+
+https://github.com/Maxwahl/jeopardized
+
+https://www.jetbrains.com/help/idea/http-client-in-product-code-editor.html
+
+https://download.eclipse.org/microprofile/microprofile-rest-client-1.3/microprofile-rest-client-1.3.html
+
+https://docs.jboss.org/resteasy/docs/3.6.2.Final/userguide/html/MicroProfile_Rest_Client.html
+
+https://rieckpil.de/howto-microprofile-rest-client-for-restful-communication/
+
+https://quarkus.io/guides/getting-started-testing
